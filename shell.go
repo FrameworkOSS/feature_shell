@@ -54,9 +54,9 @@ func NewShell(p *portal.Portal, instance string, requireStart, stdCmds bool, ini
 
 	sh.processor = event.NewEventHandler().
 		Handle(sh.eWorkdir, "workdir").
-		Handle(sh.eSuccess, "success").
-		Handle(sh.eResp, "resp", "shell").
-		Handle(sh.eError, "error")
+		Handle(sh.eSuccess, event.EVENT_SUCCESS).
+		Handle(sh.eResp, event.EVENT_RESPONSE, "shell").
+		Handle(sh.eError, event.EVENT_ERROR)
 
 	if instance == "" {
 		instance = "shell"
