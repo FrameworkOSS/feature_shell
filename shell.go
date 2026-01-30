@@ -10,8 +10,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/FrameworkOSS/portal/features/commands"
-	"github.com/FrameworkOSS/portal/portal"
+	"github.com/FrameworkOSS/event"
+	commands "github.com/FrameworkOSS/feature_commands"
+	"github.com/FrameworkOSS/portal"
 	"github.com/fatih/color"
 )
 
@@ -24,8 +25,8 @@ var (
 
 type Shell struct {
 	lockResp  sync.Mutex
-	resps     []*portal.Event
-	processor *portal.EventHandler
+	resps     []*event.Event
+	processor *event.EventHandler
 
 	running      bool
 	canType      bool
@@ -49,9 +50,9 @@ func NewShell(p *portal.Portal, instance string, requireStart, stdCmds bool, ini
 
 	sh = new(Shell)
 	sh.p = p
-	sh.resps = make([]*portal.Event, 0)
+	sh.resps = make([]*event.Event, 0)
 
-	sh.processor = portal.NewEventHandler().
+	sh.processor = event.NewEventHandler().
 		Handle(sh.eWorkdir, "workdir").
 		Handle(sh.eSuccess, "success").
 		Handle(sh.eResp, "resp", "shell").
@@ -72,7 +73,7 @@ func NewShell(p *portal.Portal, instance string, requireStart, stdCmds bool, ini
 	return
 }
 
-func (sh *Shell) eWorkdir(e *portal.Event) error {
+func (sh *Shell) eWorkdir(e *event.Event) error {
 	wd := sh.workdir
 	sh.workdir = string(e.GetData())
 	if wd != sh.workdir {
@@ -82,14 +83,14 @@ func (sh *Shell) eWorkdir(e *portal.Event) error {
 	return nil
 }
 
-func (sh *Shell) eSuccess(e *portal.Event) error {
+func (sh *Shell) eSuccess(e *event.Event) error {
 	fmt.Printf("Success: %s (%s)\n", e.GetProducer(), e.GetChannel())
 	sh.lastPrompted = false
 	sh.prompt(true)
 	return nil
 }
 
-func (sh *Shell) eResp(e *portal.Event) error {
+func (sh *Shell) eResp(e *event.Event) error {
 	if e.GetDataSize() > 0 {
 		str := string(e.GetData())
 		if e.GetID() != "shell" && str[len(str)-1] != '\n' {
@@ -102,7 +103,7 @@ func (sh *Shell) eResp(e *portal.Event) error {
 	return nil
 }
 
-func (sh *Shell) eError(e *portal.Event) error {
+func (sh *Shell) eError(e *event.Event) error {
 	if e.GetDataSize() > 0 {
 		fmt.Printf("%s\n", red(string(e.GetData())))
 	} else {
@@ -150,12 +151,12 @@ func (sh *Shell) Close() (errs []error, retry bool) {
 	return
 }
 
-func (sh *Shell) Input(e *portal.Event) error {
+func (sh *Shell) Input(e *event.Event) error {
 	sh.processor.Process(e)
 	return nil
 }
 
-func (sh *Shell) Output() (*portal.Event, error) {
+func (sh *Shell) Output() (*event.Event, error) {
 	sh.lockResp.Lock()
 	defer sh.lockResp.Unlock()
 	if len(sh.resps) == 0 {
@@ -166,7 +167,7 @@ func (sh *Shell) Output() (*portal.Event, error) {
 	return e, nil
 }
 
-func (sh *Shell) storeResp(e *portal.Event) {
+func (sh *Shell) storeResp(e *event.Event) {
 	sh.lockResp.Lock()
 	defer sh.lockResp.Unlock()
 	sh.resps = append(sh.resps, e)
@@ -174,12 +175,12 @@ func (sh *Shell) storeResp(e *portal.Event) {
 
 func (sh *Shell) ready() {
 	sh.running = true
-	sh.storeResp(portal.NewEventReady(sh.ID(), true))
+	sh.storeResp(event.NewEventReady(sh.ID(), true))
 }
 
 func (sh *Shell) unready() {
 	sh.running = false
-	sh.storeResp(portal.NewEventReady(sh.ID(), false))
+	sh.storeResp(event.NewEventReady(sh.ID(), false))
 }
 
 func (sh *Shell) prompt(reset bool) {
@@ -213,7 +214,7 @@ func (sh *Shell) loopStdin() {
 	}
 
 	//Wait for a response about the current workdir from files
-	sh.storeResp(portal.NewEvent().SetID("workdir").AddParticipants("files"))
+	sh.storeResp(event.NewEvent().SetID("workdir").AddParticipants("files"))
 	for {
 		if !sh.running {
 			return
@@ -227,7 +228,7 @@ func (sh *Shell) loopStdin() {
 	if len(sh.initCmds) > 0 {
 		for i := 0; i < len(sh.initCmds); i++ {
 			if err := sh.exec(sh.initCmds[i]); err != nil {
-				sh.Input(portal.NewEventError(sh.ID(), err))
+				sh.Input(event.NewEventError(sh.ID(), err))
 			}
 			if !sh.running {
 				return
@@ -263,7 +264,7 @@ func (sh *Shell) loopStdin() {
 		}
 
 		if err := sh.exec(line); err != nil {
-			sh.Input(portal.NewEventError(sh.ID(), err))
+			sh.Input(event.NewEventError(sh.ID(), err))
 		}
 	}
 
@@ -306,7 +307,7 @@ func (sh *Shell) handle(op ...string) bool {
 		if len(op) > 1 {
 			duration, err := strconv.Atoi(op[1])
 			if err != nil {
-				sh.Input(portal.NewEventError(sh.ID(), err))
+				sh.Input(event.NewEventError(sh.ID(), err))
 			}
 			time.Sleep(time.Millisecond * time.Duration(duration))
 		} else {
@@ -318,7 +319,7 @@ func (sh *Shell) handle(op ...string) bool {
 	}
 
 	if resp != "" {
-		r := portal.NewEventResponse(sh.ID(), nil).SetID("shell")
+		r := event.NewEventResponse(sh.ID(), nil).SetID("shell")
 		if resp != " " {
 			r.SetData([]byte(resp))
 		}
