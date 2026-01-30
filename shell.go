@@ -12,6 +12,7 @@ import (
 
 	"github.com/FrameworkOSS/event"
 	commands "github.com/FrameworkOSS/feature_commands"
+	"github.com/FrameworkOSS/feature_shell/metadata"
 	"github.com/FrameworkOSS/portal"
 	"github.com/fatih/color"
 )
@@ -115,27 +116,27 @@ func (sh *Shell) eError(e *event.Event) error {
 }
 
 func (sh *Shell) API() int {
-	return 0
+	return metadata.API
 }
 
 func (sh *Shell) ID() string {
-	return "shell"
+	return metadata.ID
 }
 
 func (sh *Shell) Name() string {
-	return "Shell"
+	return metadata.Name
 }
 
 func (sh *Shell) Authors() []string {
-	return []string{"JoshuaDoes"}
+	return strings.Split(metadata.Authors, ",")
 }
 
 func (sh *Shell) Description() string {
-	return "An interactive shell to translate stdin to commands."
+	return metadata.Description
 }
 
 func (sh *Shell) Version() string {
-	return "v0.0.1"
+	return metadata.Version
 }
 
 func (sh *Shell) Open() error {
