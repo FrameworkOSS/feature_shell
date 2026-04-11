@@ -60,7 +60,7 @@ func NewShell(p *portal.Portal, instance string, requireStart, stdCmds bool, ini
 		Handle(sh.eError, event.EVENT_ERROR)
 
 	if instance == "" {
-		instance = "shell"
+		instance = metadata.ID
 	}
 	sh.instance = instance
 	sh.press = requireStart
@@ -120,7 +120,7 @@ func (sh *Shell) API() int {
 }
 
 func (sh *Shell) ID() string {
-	return metadata.ID
+	return sh.instance
 }
 
 func (sh *Shell) Name() string {
